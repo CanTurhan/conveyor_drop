@@ -25,7 +25,7 @@ class _GameScreenState extends State<GameScreen>
   static const Color warmCream = Color(0xFFFFE3B8);
   static const Color accent = Color(0xFFFFC63D);
 
-  final ConveyorDropController _controller = ConveyorDropController();
+  final ColorMatchWheelController _controller = ColorMatchWheelController();
   final LifeService _lifeService = LifeService();
   final GameAudioService _audioService = GameAudioService();
   final RewardedLifeAdService _rewardedLifeAdService = RewardedLifeAdService();
@@ -487,7 +487,7 @@ class _GameScreenState extends State<GameScreen>
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Conveyor Drop',
+                    'Color Match Wheel',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 34,

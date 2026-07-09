@@ -10,16 +10,16 @@ Future<void> main() async {
 
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  runApp(const ConveyorDropApp());
+  runApp(const ColorMatchWheelApp());
 }
 
-class ConveyorDropApp extends StatelessWidget {
-  const ConveyorDropApp({super.key});
+class ColorMatchWheelApp extends StatelessWidget {
+  const ColorMatchWheelApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Conveyor Drop',
+      title: 'Color Match Wheel',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,

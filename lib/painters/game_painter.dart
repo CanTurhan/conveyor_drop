@@ -8,7 +8,7 @@ import '../models/drop_color_type.dart';
 class GamePainter extends CustomPainter {
   GamePainter(this.controller);
 
-  final ConveyorDropController controller;
+  final ColorMatchWheelController controller;
 
   static const Color darkBrown = Color(0xFF3A2A1C);
   static const Color cream = Color(0xFFFFF6E8);
@@ -190,7 +190,7 @@ class GamePainter extends CustomPainter {
 
   void _drawDropLine(Canvas canvas, Size size) {
     final wheelCenterY =
-        size.height - ConveyorDropController.wheelCenterBottomOffset;
+        size.height - ColorMatchWheelController.wheelCenterBottomOffset;
 
     final linePaint = Paint()
       ..color = const Color.fromRGBO(58, 42, 28, 0.13)
@@ -199,7 +199,10 @@ class GamePainter extends CustomPainter {
 
     canvas.drawLine(
       Offset(size.width / 2, 220),
-      Offset(size.width / 2, wheelCenterY - ConveyorDropController.wheelRadius),
+      Offset(
+        size.width / 2,
+        wheelCenterY - ColorMatchWheelController.wheelRadius,
+      ),
       linePaint,
     );
   }
@@ -240,10 +243,10 @@ class GamePainter extends CustomPainter {
   void _drawWheel(Canvas canvas, Size size) {
     final center = Offset(
       size.width / 2,
-      size.height - ConveyorDropController.wheelCenterBottomOffset,
+      size.height - ColorMatchWheelController.wheelCenterBottomOffset,
     );
 
-    const radius = ConveyorDropController.wheelRadius;
+    const radius = ColorMatchWheelController.wheelRadius;
     const outerRadius = 104.0;
     const pieceRadius = 27.0;
 
