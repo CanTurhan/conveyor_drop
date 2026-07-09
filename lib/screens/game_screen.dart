@@ -8,6 +8,7 @@ import '../game/conveyor_drop_controller.dart';
 import '../painters/game_painter.dart';
 import '../services/audio_service.dart';
 import '../services/life_service.dart';
+import '../services/rewarded_life_ad_service.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -27,6 +28,7 @@ class _GameScreenState extends State<GameScreen>
   final ConveyorDropController _controller = ConveyorDropController();
   final LifeService _lifeService = LifeService();
   final GameAudioService _audioService = GameAudioService();
+  final RewardedLifeAdService _rewardedLifeAdService = RewardedLifeAdService();
 
   late final Ticker _ticker;
   Timer? _lifeTimer;
@@ -53,6 +55,7 @@ class _GameScreenState extends State<GameScreen>
 
     _loadLives();
     unawaited(_audioService.setSoundEnabled(_soundEnabled));
+    _rewardedLifeAdService.load();
 
     _lifeTimer = Timer.periodic(
       const Duration(seconds: 1),
@@ -64,6 +67,7 @@ class _GameScreenState extends State<GameScreen>
   void dispose() {
     _lifeTimer?.cancel();
     unawaited(_audioService.dispose());
+    _rewardedLifeAdService.dispose();
     _ticker.dispose();
     super.dispose();
   }
@@ -138,7 +142,23 @@ class _GameScreenState extends State<GameScreen>
     });
   }
 
-  Future<void> _addLifeFromRewardPlaceholder() async {
+  Future<void> _showRewardedLifeAd() async {
+    if (_lives >= LifeService.maxLives) return;
+
+    final rewarded = await _rewardedLifeAdService.showAndWaitForReward();
+
+    if (!mounted) return;
+
+    if (!rewarded) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ad is not ready yet. Try again soon.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     final state = await _lifeService.addLifeFromReward();
 
     if (!mounted) return;
@@ -146,15 +166,9 @@ class _GameScreenState extends State<GameScreen>
     setState(() {
       _lives = state.lives;
       _nextLifeRemaining = state.nextLifeRemaining;
-      _controller.setLives(_lives);
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Rewarded Ad placeholder: +1 life added.'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    _controller.setLives(_lives);
   }
 
   String _formatRemaining(Duration duration) {
@@ -608,7 +622,7 @@ class _GameScreenState extends State<GameScreen>
                       width: double.infinity,
                       height: 50,
                       child: OutlinedButton(
-                        onPressed: _addLifeFromRewardPlaceholder,
+                        onPressed: _showRewardedLifeAd,
                         style: OutlinedButton.styleFrom(
                           foregroundColor: darkBrown,
                           side: const BorderSide(color: darkBrown, width: 2),
@@ -735,7 +749,7 @@ class _GameScreenState extends State<GameScreen>
                     width: double.infinity,
                     height: 50,
                     child: OutlinedButton(
-                      onPressed: _addLifeFromRewardPlaceholder,
+                      onPressed: _showRewardedLifeAd,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: darkBrown,
                         side: const BorderSide(color: darkBrown, width: 2),
