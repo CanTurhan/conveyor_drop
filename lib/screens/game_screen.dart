@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../game/conveyor_drop_controller.dart';
 import '../painters/game_painter.dart';
+import '../services/audio_service.dart';
 import '../services/life_service.dart';
 
 class GameScreen extends StatefulWidget {
@@ -25,6 +26,7 @@ class _GameScreenState extends State<GameScreen>
 
   final ConveyorDropController _controller = ConveyorDropController();
   final LifeService _lifeService = LifeService();
+  final GameAudioService _audioService = GameAudioService();
 
   late final Ticker _ticker;
   Timer? _lifeTimer;
@@ -49,6 +51,7 @@ class _GameScreenState extends State<GameScreen>
     _ticker.start();
 
     _loadLives();
+    unawaited(_audioService.setSoundEnabled(_soundEnabled));
 
     _lifeTimer = Timer.periodic(
       const Duration(seconds: 1),
@@ -59,6 +62,7 @@ class _GameScreenState extends State<GameScreen>
   @override
   void dispose() {
     _lifeTimer?.cancel();
+    unawaited(_audioService.dispose());
     _ticker.dispose();
     super.dispose();
   }
@@ -254,6 +258,7 @@ class _GameScreenState extends State<GameScreen>
                         onChanged: (value) {
                           setDialogState(() => _soundEnabled = value);
                           setState(() {});
+                          unawaited(_audioService.setSoundEnabled(value));
                         },
                       ),
                       const SizedBox(height: 12),
