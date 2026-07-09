@@ -45,6 +45,7 @@ class ConveyorDropController {
   int _score = 0;
   int _bestScore = 0;
   int _spawnedItemCount = 0;
+  int _lives = 3;
 
   double _visualRotation = 0;
   double _targetRotation = 0;
@@ -66,6 +67,7 @@ class ConveyorDropController {
 
   int get score => _score;
   int get bestScore => _bestScore;
+  int get lives => _lives;
   int get level => (_score ~/ pointsPerLevel) + 1;
 
   bool get isStarted => _isStarted;
@@ -75,6 +77,10 @@ class ConveyorDropController {
   DropColorType get topWheelColor {
     final index = ((-_rotationSteps) % 4 + 4) % 4;
     return wheelColors[index];
+  }
+
+  void setLives(int lives) {
+    _lives = lives.clamp(0, 3);
   }
 
   void start() {

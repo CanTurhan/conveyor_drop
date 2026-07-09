@@ -332,7 +332,7 @@ class GamePainter extends CustomPainter {
 
     _drawText(
       canvas: canvas,
-      text: '3',
+      text: '${controller.lives}',
       position: Offset.zero,
       fontSize: 22,
       weight: FontWeight.w900,

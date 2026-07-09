@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import '../game/conveyor_drop_controller.dart';
 import '../painters/game_painter.dart';
+import '../services/life_service.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -21,14 +24,20 @@ class _GameScreenState extends State<GameScreen>
   static const Color accent = Color(0xFFFFC63D);
 
   final ConveyorDropController _controller = ConveyorDropController();
+  final LifeService _lifeService = LifeService();
 
   late final Ticker _ticker;
+  Timer? _lifeTimer;
 
   Duration _lastElapsed = Duration.zero;
   Size _lastSize = Size.zero;
 
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
+
+  int _lives = LifeService.maxLives;
+  Duration _nextLifeRemaining = Duration.zero;
+  bool _gameOverLifeHandled = false;
 
   double _hintVisibleSeconds = 0;
 
@@ -38,10 +47,18 @@ class _GameScreenState extends State<GameScreen>
 
     _ticker = createTicker(_onTick);
     _ticker.start();
+
+    _loadLives();
+
+    _lifeTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _refreshLives(),
+    );
   }
 
   @override
   void dispose() {
+    _lifeTimer?.cancel();
     _ticker.dispose();
     super.dispose();
   }
@@ -58,6 +75,11 @@ class _GameScreenState extends State<GameScreen>
       _controller.update(dt, _lastSize);
     }
 
+    if (_controller.isGameOver && !_gameOverLifeHandled) {
+      _gameOverLifeHandled = true;
+      _consumeLifeAfterGameOver();
+    }
+
     if (_controller.isStarted &&
         !_controller.isPaused &&
         !_controller.isGameOver &&
@@ -68,6 +90,69 @@ class _GameScreenState extends State<GameScreen>
     if (mounted) {
       setState(() {});
     }
+  }
+
+  Future<void> _loadLives() async {
+    final state = await _lifeService.loadState();
+
+    if (!mounted) return;
+
+    setState(() {
+      _lives = state.lives;
+      _nextLifeRemaining = state.nextLifeRemaining;
+      _controller.setLives(_lives);
+    });
+  }
+
+  Future<void> _refreshLives() async {
+    final state = await _lifeService.loadState();
+
+    if (!mounted) return;
+
+    setState(() {
+      _lives = state.lives;
+      _nextLifeRemaining = state.nextLifeRemaining;
+      _controller.setLives(_lives);
+    });
+  }
+
+  Future<void> _consumeLifeAfterGameOver() async {
+    final state = await _lifeService.consumeLife();
+
+    if (!mounted) return;
+
+    setState(() {
+      _lives = state.lives;
+      _nextLifeRemaining = state.nextLifeRemaining;
+      _controller.setLives(_lives);
+    });
+  }
+
+  Future<void> _addLifeFromRewardPlaceholder() async {
+    final state = await _lifeService.addLifeFromReward();
+
+    if (!mounted) return;
+
+    setState(() {
+      _lives = state.lives;
+      _nextLifeRemaining = state.nextLifeRemaining;
+      _controller.setLives(_lives);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Rewarded Ad placeholder: +1 life added.'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  String _formatRemaining(Duration duration) {
+    final totalSeconds = duration.inSeconds;
+    final minutes = (totalSeconds ~/ 60).toString().padLeft(2, '0');
+    final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
+
+    return '$minutes:$seconds';
   }
 
   void _handleSwipe(DragEndDetails details) {
@@ -84,16 +169,26 @@ class _GameScreenState extends State<GameScreen>
     HapticFeedback.selectionClick();
   }
 
-  void _startGame() {
+  Future<void> _startGame() async {
+    await _refreshLives();
+
+    if (_lives <= 0) return;
+
     setState(() {
       _hintVisibleSeconds = 0;
+      _gameOverLifeHandled = false;
       _controller.start();
     });
   }
 
-  void _restartGame() {
+  Future<void> _restartGame() async {
+    await _refreshLives();
+
+    if (_lives <= 0) return;
+
     setState(() {
       _hintVisibleSeconds = 0;
+      _gameOverLifeHandled = false;
       _controller.restart();
     });
   }
@@ -234,7 +329,13 @@ class _GameScreenState extends State<GameScreen>
                 ),
               ),
               _buildTopHud(),
-              if (!_controller.isStarted && !_controller.isGameOver)
+              if (!_controller.isStarted &&
+                  !_controller.isGameOver &&
+                  _lives <= 0)
+                _buildNoLivesPanel(),
+              if (!_controller.isStarted &&
+                  !_controller.isGameOver &&
+                  _lives > 0)
                 _buildStartPanel(),
               if (_controller.isPaused) _buildPausePanel(),
               if (_controller.isGameOver) _buildGameOverPanel(),
@@ -426,6 +527,8 @@ class _GameScreenState extends State<GameScreen>
   }
 
   Widget _buildGameOverPanel() {
+    final hasLives = _lives > 0;
+
     return SafeArea(
       child: Center(
         child: SingleChildScrollView(
@@ -442,9 +545,9 @@ class _GameScreenState extends State<GameScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'Game Over',
-                    style: TextStyle(
+                  Text(
+                    hasLives ? 'Game Over' : 'No Lives',
+                    style: const TextStyle(
                       fontSize: 34,
                       height: 1,
                       fontWeight: FontWeight.w900,
@@ -462,33 +565,167 @@ class _GameScreenState extends State<GameScreen>
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: _ResultBox(
-                          label: 'Best',
-                          value: '${_controller.bestScore}',
-                        ),
+                        child: _ResultBox(label: 'Lives', value: '$_lives'),
                       ),
                     ],
                   ),
+                  if (!hasLives) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      'Next life in ${_formatRemaining(_nextLifeRemaining)}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: darkBrown,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton(
+                        onPressed: _addLifeFromRewardPlaceholder,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: darkBrown,
+                          side: const BorderSide(color: darkBrown, width: 2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        child: const Text(
+                          'WATCH AD +1 LIFE',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 22),
                   SizedBox(
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: _restartGame,
+                      onPressed: hasLives ? _restartGame : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: darkBrown,
+                        disabledBackgroundColor: const Color.fromRGBO(
+                          58,
+                          42,
+                          28,
+                          0.28,
+                        ),
                         foregroundColor: cream,
+                        disabledForegroundColor: const Color.fromRGBO(
+                          255,
+                          246,
+                          232,
+                          0.70,
+                        ),
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
                       ),
-                      child: const Text(
-                        'RETRY',
-                        style: TextStyle(
+                      child: Text(
+                        hasLives ? 'RETRY' : 'WAIT',
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoLivesPanel() {
+    return SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(26, 110, 26, 28),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 350),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: cream,
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(color: darkBrown, width: 3),
+                boxShadow: const [
+                  BoxShadow(
+                    blurRadius: 24,
+                    offset: Offset(0, 12),
+                    color: Color.fromRGBO(0, 0, 0, 0.24),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.favorite_rounded,
+                    color: Color(0xFFFF4E55),
+                    size: 54,
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'No Lives',
+                    style: TextStyle(
+                      fontSize: 34,
+                      height: 1,
+                      fontWeight: FontWeight.w900,
+                      color: darkBrown,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Next life in ${_formatRemaining(_nextLifeRemaining)}',
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: darkBrown,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'You can hold up to 3 lives.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                      color: Color.fromRGBO(58, 42, 28, 0.65),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: OutlinedButton(
+                      onPressed: _addLifeFromRewardPlaceholder,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: darkBrown,
+                        side: const BorderSide(color: darkBrown, width: 2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      child: const Text(
+                        'WATCH AD +1 LIFE',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
