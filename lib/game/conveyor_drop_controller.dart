@@ -4,7 +4,7 @@ import 'dart:ui';
 import '../models/drop_color_type.dart';
 import '../models/falling_item.dart';
 
-class ColorMatchWheelController {
+class ColorMatchSpinRushController {
   final Random _random = Random();
 
   static const int pointsPerLevel = 12;

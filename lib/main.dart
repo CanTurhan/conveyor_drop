@@ -10,16 +10,16 @@ Future<void> main() async {
 
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  runApp(const ColorMatchWheelApp());
+  runApp(const ColorMatchSpinRushApp());
 }
 
-class ColorMatchWheelApp extends StatelessWidget {
-  const ColorMatchWheelApp({super.key});
+class ColorMatchSpinRushApp extends StatelessWidget {
+  const ColorMatchSpinRushApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Color Match Wheel',
+      title: 'Color Match Spin Rush',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
