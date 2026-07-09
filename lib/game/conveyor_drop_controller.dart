@@ -10,6 +10,9 @@ class ConveyorDropController {
   static const int pointsPerLevel = 12;
   static const double noSpeedUpSeconds = 60;
 
+  static const double wheelCenterBottomOffset = 135;
+  static const double wheelRadius = 76;
+
   static const List<DropColorType> _tutorialSequence = [
     DropColorType.red,
     DropColorType.red,
@@ -43,6 +46,9 @@ class ConveyorDropController {
   int _bestScore = 0;
   int _spawnedItemCount = 0;
 
+  double _visualRotation = 0;
+  double _targetRotation = 0;
+
   double _spawnTimer = 0;
   double _elapsedGameSeconds = 0;
 
@@ -54,6 +60,8 @@ class ConveyorDropController {
   Map<DropColorType, int> get bins => Map.unmodifiable(_bins);
 
   int get rotationSteps => _rotationSteps;
+  double get visualRotation => _visualRotation;
+
   int get score => _score;
   int get bestScore => _bestScore;
   int get level => (_score ~/ pointsPerLevel) + 1;
@@ -93,19 +101,39 @@ class ConveyorDropController {
 
   void rotateLeft() {
     if (!_isStarted || _isGameOver || _isPaused) return;
-    _rotationSteps--;
+    _rotateBySteps(-1);
   }
 
   void rotateRight() {
     if (!_isStarted || _isGameOver || _isPaused) return;
-    _rotationSteps++;
+    _rotateBySteps(1);
+  }
+
+  void rotateWithVelocity(double velocity) {
+    if (!_isStarted || _isGameOver || _isPaused) return;
+    if (velocity == 0) return;
+
+    final direction = velocity < 0 ? -1 : 1;
+    final force = velocity.abs();
+
+    final steps = force >= 2600
+        ? 3
+        : force >= 1350
+        ? 2
+        : 1;
+
+    _rotateBySteps(direction * steps);
   }
 
   void update(double dt, Size size) {
-    if (!_isStarted || _isGameOver || _isPaused) return;
     if (size.width <= 0 || size.height <= 0) return;
 
     final safeDt = min(dt, 0.033);
+
+    _updateWheelAnimation(safeDt);
+
+    if (!_isStarted || _isGameOver || _isPaused) return;
+
     _elapsedGameSeconds += safeDt;
 
     final tutorialActive = _spawnedItemCount < _tutorialSequence.length;
@@ -134,6 +162,23 @@ class ConveyorDropController {
     _items.removeWhere((item) => item.y > size.height + 80);
   }
 
+  void _rotateBySteps(int steps) {
+    _rotationSteps += steps;
+    _targetRotation = _rotationSteps * pi / 2;
+  }
+
+  void _updateWheelAnimation(double dt) {
+    final diff = _targetRotation - _visualRotation;
+
+    if (diff.abs() < 0.001) {
+      _visualRotation = _targetRotation;
+      return;
+    }
+
+    final smoothing = min(1.0, dt * 14);
+    _visualRotation += diff * smoothing;
+  }
+
   void _reset({required bool started}) {
     _items.clear();
 
@@ -142,6 +187,9 @@ class ConveyorDropController {
     }
 
     _rotationSteps = 0;
+    _visualRotation = 0;
+    _targetRotation = 0;
+
     _score = 0;
     _spawnedItemCount = 0;
     _spawnTimer = 0;
@@ -164,8 +212,8 @@ class ConveyorDropController {
   }
 
   void _checkCatchPoint(Size size) {
-    final wheelCenterY = size.height - 168;
-    final catchY = wheelCenterY - 92;
+    final wheelCenterY = size.height - wheelCenterBottomOffset;
+    final catchY = wheelCenterY - wheelRadius;
 
     for (final item in List<FallingItem>.from(_items)) {
       if (item.y >= catchY) {

@@ -120,7 +120,8 @@ class GamePainter extends CustomPainter {
   }
 
   void _drawDropLine(Canvas canvas, Size size) {
-    final wheelCenterY = size.height - 168;
+    final wheelCenterY =
+        size.height - ConveyorDropController.wheelCenterBottomOffset;
 
     final linePaint = Paint()
       ..color = const Color.fromRGBO(58, 42, 28, 0.13)
@@ -129,7 +130,7 @@ class GamePainter extends CustomPainter {
 
     canvas.drawLine(
       Offset(size.width / 2, 220),
-      Offset(size.width / 2, wheelCenterY - 92),
+      Offset(size.width / 2, wheelCenterY - ConveyorDropController.wheelRadius),
       linePaint,
     );
   }
@@ -168,10 +169,14 @@ class GamePainter extends CustomPainter {
   }
 
   void _drawWheel(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height - 168);
+    final center = Offset(
+      size.width / 2,
+      size.height - ConveyorDropController.wheelCenterBottomOffset,
+    );
 
-    const radius = 92.0;
-    const pieceRadius = 32.0;
+    const radius = ConveyorDropController.wheelRadius;
+    const outerRadius = 104.0;
+    const pieceRadius = 27.0;
 
     final positions = <Offset>[
       const Offset(0, -radius),
@@ -184,26 +189,30 @@ class GamePainter extends CustomPainter {
       ..color = const Color.fromRGBO(0, 0, 0, 0.16)
       ..style = PaintingStyle.fill;
 
-    canvas.drawCircle(Offset(center.dx, center.dy + 12), 126, shadowPaint);
+    canvas.drawCircle(
+      Offset(center.dx, center.dy + 10),
+      outerRadius,
+      shadowPaint,
+    );
 
     final basePaint = Paint()
       ..color = const Color.fromRGBO(255, 246, 232, 0.58)
       ..style = PaintingStyle.fill;
 
-    canvas.drawCircle(center, 126, basePaint);
+    canvas.drawCircle(center, outerRadius, basePaint);
 
     final ringPaint = Paint()
       ..color = const Color.fromRGBO(58, 42, 28, 0.12)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4;
 
-    canvas.drawCircle(center, 126, ringPaint);
+    canvas.drawCircle(center, outerRadius, ringPaint);
 
     _drawCatchArrow(canvas, center);
 
     canvas.save();
     canvas.translate(center.dx, center.dy);
-    canvas.rotate(controller.rotationSteps * pi / 2);
+    canvas.rotate(controller.visualRotation);
 
     for (int i = 0; i < controller.wheelColors.length; i++) {
       final colorType = controller.wheelColors[i];
@@ -214,7 +223,7 @@ class GamePainter extends CustomPainter {
         ..style = PaintingStyle.fill;
 
       canvas.drawCircle(
-        Offset(position.dx, position.dy + 6),
+        Offset(position.dx, position.dy + 5),
         pieceRadius,
         pieceShadowPaint,
       );
@@ -241,22 +250,22 @@ class GamePainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [cream, Color(0xFFFFD7A1)],
-      ).createShader(const Rect.fromLTWH(-40, -40, 80, 80));
+      ).createShader(const Rect.fromLTWH(-33, -33, 66, 66));
 
-    canvas.drawCircle(Offset.zero, 39, centerPaint);
+    canvas.drawCircle(Offset.zero, 32, centerPaint);
 
     final centerBorderPaint = Paint()
       ..color = darkBrown
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
 
-    canvas.drawCircle(Offset.zero, 39, centerBorderPaint);
+    canvas.drawCircle(Offset.zero, 32, centerBorderPaint);
 
     _drawText(
       canvas: canvas,
       text: '3',
       position: Offset.zero,
-      fontSize: 25,
+      fontSize: 22,
       weight: FontWeight.w900,
       color: darkBrown,
     );
@@ -270,9 +279,9 @@ class GamePainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final path = Path()
-      ..moveTo(center.dx, center.dy - 143)
-      ..lineTo(center.dx - 14, center.dy - 116)
-      ..lineTo(center.dx + 14, center.dy - 116)
+      ..moveTo(center.dx, center.dy - 119)
+      ..lineTo(center.dx - 12, center.dy - 96)
+      ..lineTo(center.dx + 12, center.dy - 96)
       ..close();
 
     canvas.drawPath(path, arrowPaint);
@@ -285,8 +294,8 @@ class GamePainter extends CustomPainter {
 
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromCenter(center: position, width: 43, height: 24),
-        const Radius.circular(12),
+        Rect.fromCenter(center: position, width: 38, height: 22),
+        const Radius.circular(11),
       ),
       bubblePaint,
     );
@@ -295,7 +304,7 @@ class GamePainter extends CustomPainter {
       canvas: canvas,
       text: text,
       position: position,
-      fontSize: 12,
+      fontSize: 11,
       weight: FontWeight.w900,
       color: darkBrown,
     );

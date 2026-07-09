@@ -73,13 +73,10 @@ class _GameScreenState extends State<GameScreen>
   void _handleSwipe(DragEndDetails details) {
     final velocity = details.primaryVelocity ?? 0;
 
-    if (velocity < 0) {
-      _controller.rotateLeft();
-      _vibrate();
-    } else if (velocity > 0) {
-      _controller.rotateRight();
-      _vibrate();
-    }
+    if (velocity == 0) return;
+
+    _controller.rotateWithVelocity(velocity);
+    _vibrate();
   }
 
   void _vibrate() {
