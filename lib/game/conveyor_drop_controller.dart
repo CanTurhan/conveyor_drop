@@ -8,7 +8,7 @@ class ColorMatchWheelController {
   final Random _random = Random();
 
   static const int pointsPerLevel = 12;
-  static const double noSpeedUpSeconds = 60;
+  static const double noSpeedUpSeconds = 30;
 
   static const double wheelCenterBottomOffset = 135;
   static const double wheelRadius = 76;
