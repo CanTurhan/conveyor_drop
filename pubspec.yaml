@@ -58,6 +58,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/audio/bg_music.wav
+    - assets/audio/blup.wav
 
   # To add assets to your application, add an assets section, like this:
   # assets:

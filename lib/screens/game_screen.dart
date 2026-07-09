@@ -42,6 +42,7 @@ class _GameScreenState extends State<GameScreen>
   bool _gameOverLifeHandled = false;
 
   double _hintVisibleSeconds = 0;
+  int _lastCatchEventCount = 0;
 
   @override
   void initState() {
@@ -77,6 +78,11 @@ class _GameScreenState extends State<GameScreen>
 
     if (_lastSize != Size.zero) {
       _controller.update(dt, _lastSize);
+    }
+
+    if (_controller.catchEventCount > _lastCatchEventCount) {
+      _lastCatchEventCount = _controller.catchEventCount;
+      unawaited(_audioService.playCorrectCatchEffect());
     }
 
     if (_controller.isGameOver && !_gameOverLifeHandled) {
@@ -180,6 +186,7 @@ class _GameScreenState extends State<GameScreen>
 
     setState(() {
       _hintVisibleSeconds = 0;
+      _lastCatchEventCount = 0;
       _gameOverLifeHandled = false;
       _controller.start();
     });
@@ -192,6 +199,7 @@ class _GameScreenState extends State<GameScreen>
 
     setState(() {
       _hintVisibleSeconds = 0;
+      _lastCatchEventCount = 0;
       _gameOverLifeHandled = false;
       _controller.restart();
     });

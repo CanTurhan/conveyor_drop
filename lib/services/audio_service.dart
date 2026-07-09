@@ -2,14 +2,18 @@ import 'package:audioplayers/audioplayers.dart';
 
 class GameAudioService {
   GameAudioService() {
-    _player.setReleaseMode(ReleaseMode.loop);
-    _player.setVolume(0.45);
+    _musicPlayer.setReleaseMode(ReleaseMode.loop);
+    _musicPlayer.setVolume(0.42);
+
+    _sfxPlayer.setReleaseMode(ReleaseMode.stop);
+    _sfxPlayer.setVolume(0.70);
   }
 
-  final AudioPlayer _player = AudioPlayer();
+  final AudioPlayer _musicPlayer = AudioPlayer();
+  final AudioPlayer _sfxPlayer = AudioPlayer();
 
   bool _soundEnabled = true;
-  bool _isPlaying = false;
+  bool _musicPlaying = false;
 
   Future<void> setSoundEnabled(bool enabled) async {
     _soundEnabled = enabled;
@@ -22,25 +26,43 @@ class GameAudioService {
   }
 
   Future<void> playMusic() async {
-    if (!_soundEnabled || _isPlaying) return;
+    if (!_soundEnabled || _musicPlaying) return;
 
     try {
-      await _player.play(AssetSource('audio/bg_music.wav'));
-      _isPlaying = true;
+      await _musicPlayer.play(
+        AssetSource('audio/bg_music.wav'),
+        mode: PlayerMode.mediaPlayer,
+      );
+      _musicPlaying = true;
     } catch (_) {
-      _isPlaying = false;
+      _musicPlaying = false;
     }
   }
 
   Future<void> stopMusic() async {
     try {
-      await _player.stop();
+      await _musicPlayer.stop();
     } finally {
-      _isPlaying = false;
+      _musicPlaying = false;
+    }
+  }
+
+  Future<void> playCorrectCatchEffect() async {
+    if (!_soundEnabled) return;
+
+    try {
+      await _sfxPlayer.stop();
+      await _sfxPlayer.play(
+        AssetSource('audio/blup.wav'),
+        mode: PlayerMode.lowLatency,
+      );
+    } catch (_) {
+      // Ses efekti çalmazsa oyunu bozmasın.
     }
   }
 
   Future<void> dispose() async {
-    await _player.dispose();
+    await _musicPlayer.dispose();
+    await _sfxPlayer.dispose();
   }
 }

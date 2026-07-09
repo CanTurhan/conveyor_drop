@@ -45,6 +45,7 @@ class ConveyorDropController {
   int _score = 0;
   int _bestScore = 0;
   int _spawnedItemCount = 0;
+  int _catchEventCount = 0;
   int _lives = 3;
 
   double _visualRotation = 0;
@@ -67,6 +68,7 @@ class ConveyorDropController {
 
   int get score => _score;
   int get bestScore => _bestScore;
+  int get catchEventCount => _catchEventCount;
   int get lives => _lives;
   int get level => (_score ~/ pointsPerLevel) + 1;
 
@@ -200,6 +202,7 @@ class ConveyorDropController {
     }
 
     _rotationSteps = 0;
+    _catchEventCount = 0;
     _visualRotation = 0;
     _targetRotation = 0;
 
@@ -240,6 +243,7 @@ class ConveyorDropController {
   }
 
   void _catchItem(FallingItem item) {
+    _catchEventCount++;
     _items.remove(item);
 
     final currentCount = _bins[item.colorType] ?? 0;
