@@ -51,6 +51,7 @@ class ConveyorDropController {
 
   double _spawnTimer = 0;
   double _elapsedGameSeconds = 0;
+  double _conveyorOffset = 0;
 
   bool _isStarted = false;
   bool _isGameOver = false;
@@ -60,6 +61,7 @@ class ConveyorDropController {
   Map<DropColorType, int> get bins => Map.unmodifiable(_bins);
 
   int get rotationSteps => _rotationSteps;
+  double get conveyorOffset => _conveyorOffset;
   double get visualRotation => _visualRotation;
 
   int get score => _score;
@@ -129,6 +131,11 @@ class ConveyorDropController {
     if (size.width <= 0 || size.height <= 0) return;
 
     final safeDt = min(dt, 0.033);
+
+    final conveyorSpeed = _isStarted && !_isPaused && !_isGameOver
+        ? 58.0
+        : 18.0;
+    _conveyorOffset = (_conveyorOffset + conveyorSpeed * safeDt) % 96;
 
     _updateWheelAnimation(safeDt);
 
