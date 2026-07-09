@@ -279,6 +279,7 @@ class GamePainter extends CustomPainter {
 
     _drawCatchArrow(canvas, center);
 
+    // Only the colored holes rotate.
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(controller.visualRotation);
@@ -314,32 +315,37 @@ class GamePainter extends CustomPainter {
       _drawCountBubble(canvas, position, '$count/3');
     }
 
+    canvas.restore();
+
+    // Lives indicator is drawn after restore, so it never rotates.
+    _drawCenterLives(canvas, center);
+  }
+
+  void _drawCenterLives(Canvas canvas, Offset center) {
     final centerPaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [cream, Color(0xFFFFD7A1)],
-      ).createShader(const Rect.fromLTWH(-33, -33, 66, 66));
+      ).createShader(Rect.fromCircle(center: center, radius: 32));
 
-    canvas.drawCircle(Offset.zero, 32, centerPaint);
+    canvas.drawCircle(center, 32, centerPaint);
 
     final centerBorderPaint = Paint()
       ..color = darkBrown
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
 
-    canvas.drawCircle(Offset.zero, 32, centerBorderPaint);
+    canvas.drawCircle(center, 32, centerBorderPaint);
 
     _drawText(
       canvas: canvas,
       text: '${controller.lives}',
-      position: Offset.zero,
+      position: center,
       fontSize: 22,
       weight: FontWeight.w900,
       color: darkBrown,
     );
-
-    canvas.restore();
   }
 
   void _drawCatchArrow(Canvas canvas, Offset center) {
