@@ -449,16 +449,26 @@ class _GameScreenState extends State<GameScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 70,
-                    height: 70,
+                    width: 78,
+                    height: 78,
                     decoration: BoxDecoration(
                       color: darkBrown,
                       borderRadius: BorderRadius.circular(22),
+                      boxShadow: const [
+                        BoxShadow(
+                          blurRadius: 14,
+                          offset: Offset(0, 6),
+                          color: Color.fromRGBO(0, 0, 0, 0.18),
+                        ),
+                      ],
                     ),
-                    child: const Icon(
-                      Icons.sync_rounded,
-                      color: accent,
-                      size: 40,
+                    padding: const EdgeInsets.all(6),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.asset(
+                        'assets/icons/conveyor_drop_icon.png',
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
