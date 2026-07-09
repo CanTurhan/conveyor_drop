@@ -300,7 +300,7 @@ class _GameScreenState extends State<GameScreen>
             ),
             const SizedBox(width: 8),
             _FrameButton(
-              icon: Icons.public_rounded,
+              icon: Icons.settings_rounded,
               enabled: true,
               onTap: _openSettings,
             ),
