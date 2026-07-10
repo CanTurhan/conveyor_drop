@@ -8,6 +8,7 @@ import '../game/conveyor_drop_controller.dart';
 import '../painters/game_painter.dart';
 import '../services/audio_service.dart';
 import '../services/life_service.dart';
+import '../services/tutorial_service.dart';
 import '../services/rewarded_life_ad_service.dart';
 
 class GameScreen extends StatefulWidget {
@@ -28,6 +29,7 @@ class _GameScreenState extends State<GameScreen>
   final ColorMatchSpinRushController _controller =
       ColorMatchSpinRushController();
   final LifeService _lifeService = LifeService();
+  final TutorialService _tutorialService = TutorialService();
   final GameAudioService _audioService = GameAudioService();
   final RewardedLifeAdService _rewardedLifeAdService = RewardedLifeAdService();
 
@@ -43,6 +45,7 @@ class _GameScreenState extends State<GameScreen>
   int _lives = LifeService.maxLives;
   Duration _nextLifeRemaining = Duration.zero;
   bool _gameOverLifeHandled = false;
+  bool _tutorialCompleted = true;
 
   double _hintVisibleSeconds = 0;
   int _lastCatchEventCount = 0;
@@ -55,6 +58,7 @@ class _GameScreenState extends State<GameScreen>
     _ticker.start();
 
     _loadLives();
+    _loadTutorialState();
     unawaited(_audioService.setSoundEnabled(_soundEnabled));
     _rewardedLifeAdService.load();
 
@@ -105,6 +109,28 @@ class _GameScreenState extends State<GameScreen>
     if (mounted) {
       setState(() {});
     }
+  }
+
+  Future<void> _loadTutorialState() async {
+    final completed = await _tutorialService.isTutorialCompleted();
+
+    if (!mounted) return;
+
+    setState(() {
+      _tutorialCompleted = completed;
+    });
+
+    _controller.setTutorialEnabled(!completed);
+  }
+
+  Future<void> _markTutorialSeenAfterFirstStart() async {
+    await _tutorialService.setTutorialCompleted();
+
+    if (!mounted) return;
+
+    setState(() {
+      _tutorialCompleted = true;
+    });
   }
 
   Future<void> _loadLives() async {
@@ -203,7 +229,13 @@ class _GameScreenState extends State<GameScreen>
       _hintVisibleSeconds = 0;
       _lastCatchEventCount = 0;
       _gameOverLifeHandled = false;
+      final shouldUseTutorial = !_tutorialCompleted;
+      _controller.setTutorialEnabled(shouldUseTutorial);
       _controller.start();
+
+      if (shouldUseTutorial) {
+        unawaited(_markTutorialSeenAfterFirstStart());
+      }
     });
   }
 
@@ -216,6 +248,7 @@ class _GameScreenState extends State<GameScreen>
       _hintVisibleSeconds = 0;
       _lastCatchEventCount = 0;
       _gameOverLifeHandled = false;
+      _controller.setTutorialEnabled(false);
       _controller.restart();
     });
   }

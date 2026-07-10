@@ -45,6 +45,8 @@ class ColorMatchSpinRushController {
   int _score = 0;
   int _bestScore = 0;
   int _spawnedItemCount = 0;
+  DropColorType? _lastSpawnedColor;
+  bool _useTutorialSequence = false;
   int _catchEventCount = 0;
   int _lives = 3;
 
@@ -71,6 +73,10 @@ class ColorMatchSpinRushController {
   int get catchEventCount => _catchEventCount;
   int get lives => _lives;
   int get level => (_score ~/ pointsPerLevel) + 1;
+
+  void setTutorialEnabled(bool enabled) {
+    _useTutorialSequence = enabled;
+  }
 
   bool get isStarted => _isStarted;
   bool get isGameOver => _isGameOver;
@@ -208,6 +214,7 @@ class ColorMatchSpinRushController {
 
     _score = 0;
     _spawnedItemCount = 0;
+    _lastSpawnedColor = null;
     _spawnTimer = 0;
     _elapsedGameSeconds = 0;
     _isStarted = started;
@@ -215,11 +222,54 @@ class ColorMatchSpinRushController {
     _isPaused = false;
   }
 
-  void _spawnItem(Size size) {
-    final colorType = _spawnedItemCount < _tutorialSequence.length
-        ? _tutorialSequence[_spawnedItemCount]
-        : wheelColors[_random.nextInt(wheelColors.length)];
+  DropColorType _resolveNextColor() {
+    if (_useTutorialSequence && _spawnedItemCount < _tutorialSequence.length) {
+      return _tutorialSequence[_spawnedItemCount];
+    }
 
+    final lastColor = _lastSpawnedColor;
+
+    if (lastColor != null && _random.nextDouble() < _sameColorChance) {
+      return lastColor;
+    }
+
+    if (lastColor == null) {
+      return DropColorType.values[_random.nextInt(DropColorType.values.length)];
+    }
+
+    return _randomDifferentColor(lastColor);
+  }
+
+  double get _sameColorChance {
+    if (_elapsedGameSeconds <= 45) {
+      return 0.70;
+    }
+
+    if (_elapsedGameSeconds < 60) {
+      final transition = (_elapsedGameSeconds - 45) / 15;
+      return 0.70 + ((0.40 - 0.70) * transition);
+    }
+
+    final levelPenalty = max(0, level - 1) * 0.035;
+    final timePenalty = min(
+      0.18,
+      max(0.0, _elapsedGameSeconds - 60) / 300 * 0.18,
+    );
+
+    return max(0.15, 0.40 - levelPenalty - timePenalty);
+  }
+
+  DropColorType _randomDifferentColor(DropColorType currentColor) {
+    final availableColors = DropColorType.values
+        .where((color) => color != currentColor)
+        .toList();
+
+    return availableColors[_random.nextInt(availableColors.length)];
+  }
+
+  void _spawnItem(Size size) {
+    final colorType = _resolveNextColor();
+    _lastSpawnedColor = colorType;
     _spawnedItemCount++;
 
     _items.add(
