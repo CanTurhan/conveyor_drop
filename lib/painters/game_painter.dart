@@ -20,6 +20,10 @@ class GamePainter extends CustomPainter {
     _drawDropLine(canvas, size);
     _drawItems(canvas);
     _drawWheel(canvas, size);
+
+    if (controller.isReverseSwipeActive) {
+      _drawReverseSwipeWarning(canvas, size);
+    }
   }
 
   void _drawBackground(Canvas canvas, Size size) {
@@ -62,101 +66,89 @@ class GamePainter extends CustomPainter {
   }
 
   void _drawConveyor(Canvas canvas, Size size) {
-    const top = 166.0;
-    const height = 52.0;
-    const holeY = top + 26;
+    final conveyorRect = Rect.fromLTWH(18, 166, size.width - 36, 52);
 
-    final shadowPaint = Paint()
-      ..color = const Color.fromRGBO(0, 0, 0, 0.20)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(28, top + 12, size.width - 56, 48),
-        const Radius.circular(24),
-      ),
-      shadowPaint,
-    );
-
-    final outerRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(24, top, size.width - 48, height),
+    final conveyorRRect = RRect.fromRectAndRadius(
+      conveyorRect,
       const Radius.circular(24),
     );
 
-    final outerPaint = Paint()
+    final shadowPaint = Paint()
+      ..color = const Color.fromRGBO(0, 0, 0, 0.16)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawRRect(conveyorRRect.shift(const Offset(0, 5)), shadowPaint);
+
+    final basePaint = Paint()
       ..color = darkBrown
       ..style = PaintingStyle.fill;
 
-    canvas.drawRRect(outerRect, outerPaint);
+    canvas.drawRRect(conveyorRRect, basePaint);
 
-    final beltRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(32, top + 7, size.width - 64, height - 14),
-      const Radius.circular(19),
+    final innerRect = conveyorRect.deflate(6);
+    final innerRRect = RRect.fromRectAndRadius(
+      innerRect,
+      const Radius.circular(18),
     );
 
     canvas.save();
-    canvas.clipRRect(beltRect);
+    canvas.clipRRect(innerRRect);
 
-    final basePaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFFFF6E8), Color(0xFFFFE6C8)],
-      ).createShader(beltRect.outerRect);
-
-    canvas.drawRRect(beltRect, basePaint);
-
-    final beltColors = <Color>[
-      const Color(0xFF3F86FF),
-      const Color(0xFFFFC63D),
-      const Color(0xFFFF4E55),
-      const Color(0xFF58D68D),
+    const segmentWidth = 48.0;
+    const patternColors = <Color>[
+      Color(0xFF44A8FF),
+      Color(0xFFFFC83D),
+      Color(0xFFE94B4B),
+      Color(0xFF37C96B),
     ];
 
-    const segmentWidth = 54.0;
-    const gap = 8.0;
-    final step = segmentWidth + gap;
-    final offset = controller.conveyorOffset;
+    final patternWidth = segmentWidth * patternColors.length;
+    final offset = controller.conveyorOffset % patternWidth;
 
-    for (double x = -step * 2 - offset; x < size.width + step; x += step) {
-      final colorIndex = ((x / step).floor().abs()) % beltColors.length;
+    var x = innerRect.left - offset - patternWidth;
 
-      final segmentPaint = Paint()
-        ..color = beltColors[colorIndex]
-        ..style = PaintingStyle.fill;
+    while (x < innerRect.right + patternWidth) {
+      for (final color in patternColors) {
+        final segmentRect = Rect.fromLTWH(
+          x,
+          innerRect.top,
+          segmentWidth,
+          innerRect.height,
+        );
 
-      final path = Path()
-        ..moveTo(x + 12, top + 7)
-        ..lineTo(x + segmentWidth, top + 7)
-        ..lineTo(x + segmentWidth - 12, top + height - 7)
-        ..lineTo(x, top + height - 7)
-        ..close();
+        final segmentPaint = Paint()
+          ..color = color
+          ..style = PaintingStyle.fill;
 
-      canvas.drawPath(path, segmentPaint);
+        canvas.drawRect(segmentRect, segmentPaint);
 
-      final shinePaint = Paint()
-        ..color = const Color.fromRGBO(255, 255, 255, 0.22)
-        ..strokeWidth = 3
-        ..strokeCap = StrokeCap.round;
+        final shinePaint = Paint()
+          ..color = const Color.fromRGBO(255, 255, 255, 0.20)
+          ..style = PaintingStyle.fill;
 
-      canvas.drawLine(
-        Offset(x + 12, top + 13),
-        Offset(x + segmentWidth - 10, top + 13),
-        shinePaint,
-      );
+        canvas.drawRect(
+          Rect.fromLTWH(
+            x,
+            innerRect.top,
+            segmentWidth,
+            innerRect.height * 0.34,
+          ),
+          shinePaint,
+        );
+
+        final dividerPaint = Paint()
+          ..color = const Color.fromRGBO(58, 42, 28, 0.14)
+          ..strokeWidth = 2;
+
+        canvas.drawLine(
+          Offset(x, innerRect.top),
+          Offset(x, innerRect.bottom),
+          dividerPaint,
+        );
+
+        x += segmentWidth;
+      }
     }
-
-    final overlayPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color.fromRGBO(255, 255, 255, 0.18),
-          Color.fromRGBO(0, 0, 0, 0.08),
-        ],
-      ).createShader(beltRect.outerRect);
-
-    canvas.drawRRect(beltRect, overlayPaint);
 
     canvas.restore();
 
@@ -165,27 +157,28 @@ class GamePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4;
 
-    canvas.drawRRect(outerRect, borderPaint);
+    canvas.drawRRect(conveyorRRect, borderPaint);
 
-    final holeRingPaint = Paint()
-      ..color = const Color.fromRGBO(255, 246, 232, 0.45)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 5;
-
-    canvas.drawCircle(Offset(size.width / 2, holeY), 31, holeRingPaint);
+    final holeCenter = Offset(size.width / 2, conveyorRect.center.dy);
 
     final holeShadowPaint = Paint()
-      ..color = const Color.fromRGBO(0, 0, 0, 0.22)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 8;
-
-    canvas.drawCircle(Offset(size.width / 2, holeY), 27, holeShadowPaint);
-
-    final holePaint = Paint()
-      ..color = Colors.black
+      ..color = const Color.fromRGBO(0, 0, 0, 0.26)
       ..style = PaintingStyle.fill;
 
-    canvas.drawCircle(Offset(size.width / 2, holeY), 24, holePaint);
+    canvas.drawCircle(holeCenter.translate(0, 3), 19, holeShadowPaint);
+
+    final holePaint = Paint()
+      ..color = const Color(0xFF1F1712)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(holeCenter, 18, holePaint);
+
+    final holeRingPaint = Paint()
+      ..color = cream
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4;
+
+    canvas.drawCircle(holeCenter, 20, holeRingPaint);
   }
 
   void _drawDropLine(Canvas canvas, Size size) {
@@ -385,6 +378,38 @@ class GamePainter extends CustomPainter {
       fontSize: 11,
       weight: FontWeight.w900,
       color: darkBrown,
+    );
+  }
+
+  void _drawReverseSwipeWarning(Canvas canvas, Size size) {
+    final rect = Rect.fromCenter(
+      center: Offset(size.width / 2, 292),
+      width: min(size.width - 48, 310),
+      height: 54,
+    );
+
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(22));
+
+    final bgPaint = Paint()
+      ..color = const Color(0xFF9B5CFF)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawRRect(rrect, bgPaint);
+
+    final borderPaint = Paint()
+      ..color = darkBrown
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+
+    canvas.drawRRect(rrect, borderPaint);
+
+    _drawText(
+      canvas: canvas,
+      text: 'REVERSE SWIPE ${controller.reverseSwipeRemainingSeconds.ceil()}s',
+      position: rect.center,
+      fontSize: 17,
+      weight: FontWeight.w900,
+      color: cream,
     );
   }
 

@@ -5,10 +5,20 @@ import '../models/drop_color_type.dart';
 import '../models/falling_item.dart';
 
 class ColorMatchSpinRushController {
+  static const List<DropColorType> playableColors = [
+    DropColorType.red,
+    DropColorType.blue,
+    DropColorType.green,
+    DropColorType.yellow,
+  ];
+
   final Random _random = Random();
 
   static const int pointsPerLevel = 12;
   static const double noSpeedUpSeconds = 30;
+  static const double reverseBallStartSeconds = 60;
+  static const double reverseBallBaseCooldownSeconds = 12;
+  static const double reverseSwipeBaseDurationSeconds = 5;
 
   static const double wheelCenterBottomOffset = 135;
   static const double wheelRadius = 76;
@@ -45,6 +55,8 @@ class ColorMatchSpinRushController {
   int _score = 0;
   int _bestScore = 0;
   int _spawnedItemCount = 0;
+  double _reverseSwipeRemainingSeconds = 0;
+  double _reverseBallCooldownSeconds = 0;
   DropColorType? _lastSpawnedColor;
   bool _useTutorialSequence = false;
   int _catchEventCount = 0;
@@ -70,6 +82,9 @@ class ColorMatchSpinRushController {
 
   int get score => _score;
   int get bestScore => _bestScore;
+  bool get isReverseSwipeActive => _reverseSwipeRemainingSeconds > 0;
+  double get reverseSwipeRemainingSeconds =>
+      max(0.0, _reverseSwipeRemainingSeconds);
   int get catchEventCount => _catchEventCount;
   int get lives => _lives;
   int get level => (_score ~/ pointsPerLevel) + 1;
@@ -149,13 +164,27 @@ class ColorMatchSpinRushController {
     final conveyorSpeed = _isStarted && !_isPaused && !_isGameOver
         ? 58.0
         : 18.0;
-    _conveyorOffset = (_conveyorOffset + conveyorSpeed * safeDt) % 96;
+    _conveyorOffset += conveyorSpeed * safeDt;
 
     _updateWheelAnimation(safeDt);
 
     if (!_isStarted || _isGameOver || _isPaused) return;
 
     _elapsedGameSeconds += safeDt;
+
+    if (_reverseSwipeRemainingSeconds > 0) {
+      _reverseSwipeRemainingSeconds = max(
+        0.0,
+        _reverseSwipeRemainingSeconds - safeDt,
+      );
+    }
+
+    if (_reverseBallCooldownSeconds > 0) {
+      _reverseBallCooldownSeconds = max(
+        0.0,
+        _reverseBallCooldownSeconds - safeDt,
+      );
+    }
 
     final tutorialActive = _spawnedItemCount < _tutorialSequence.length;
     final secondsAfterGrace = max(0.0, _elapsedGameSeconds - noSpeedUpSeconds);
@@ -184,7 +213,9 @@ class ColorMatchSpinRushController {
   }
 
   void _rotateBySteps(int steps) {
-    _rotationSteps += steps;
+    final reverseAdjustedSteps = isReverseSwipeActive ? -steps : steps;
+
+    _rotationSteps += reverseAdjustedSteps;
     _targetRotation = _rotationSteps * pi / 2;
   }
 
@@ -214,6 +245,8 @@ class ColorMatchSpinRushController {
 
     _score = 0;
     _spawnedItemCount = 0;
+    _reverseSwipeRemainingSeconds = 0;
+    _reverseBallCooldownSeconds = 0;
     _lastSpawnedColor = null;
     _spawnTimer = 0;
     _elapsedGameSeconds = 0;
@@ -222,9 +255,55 @@ class ColorMatchSpinRushController {
     _isPaused = false;
   }
 
+  bool _shouldSpawnReverseBall() {
+    final tutorialStillActive =
+        _useTutorialSequence && _spawnedItemCount < _tutorialSequence.length;
+
+    if (tutorialStillActive) return false;
+    if (_elapsedGameSeconds < reverseBallStartSeconds) return false;
+    if (level < 3) return false;
+    if (_reverseBallCooldownSeconds > 0) return false;
+    if (isReverseSwipeActive) return false;
+
+    return _random.nextDouble() < _reverseBallChance;
+  }
+
+  double get _reverseBallChance {
+    if (_elapsedGameSeconds < reverseBallStartSeconds) {
+      return 0.0;
+    }
+
+    final levelBonus = max(0, level - 3) * 0.012;
+    final timeBonus = min(
+      0.035,
+      max(0.0, _elapsedGameSeconds - reverseBallStartSeconds) / 240 * 0.035,
+    );
+
+    return min(0.12, 0.04 + levelBonus + timeBonus);
+  }
+
+  double get _reverseBallCooldownDuration {
+    final levelReduction = max(0, level - 3) * 0.35;
+    return max(8.0, reverseBallBaseCooldownSeconds - levelReduction);
+  }
+
+  double get _reverseSwipeDuration {
+    final levelBonus = max(0, level - 3) * 0.25;
+    return min(7.0, reverseSwipeBaseDurationSeconds + levelBonus);
+  }
+
+  void _activateReverseSwipe() {
+    _reverseSwipeRemainingSeconds = _reverseSwipeDuration;
+  }
+
   DropColorType _resolveNextColor() {
     if (_useTutorialSequence && _spawnedItemCount < _tutorialSequence.length) {
       return _tutorialSequence[_spawnedItemCount];
+    }
+
+    if (_shouldSpawnReverseBall()) {
+      _reverseBallCooldownSeconds = _reverseBallCooldownDuration;
+      return DropColorType.purple;
     }
 
     final lastColor = _lastSpawnedColor;
@@ -234,7 +313,7 @@ class ColorMatchSpinRushController {
     }
 
     if (lastColor == null) {
-      return DropColorType.values[_random.nextInt(DropColorType.values.length)];
+      return playableColors[_random.nextInt(playableColors.length)];
     }
 
     return _randomDifferentColor(lastColor);
@@ -260,7 +339,7 @@ class ColorMatchSpinRushController {
   }
 
   DropColorType _randomDifferentColor(DropColorType currentColor) {
-    final availableColors = DropColorType.values
+    final availableColors = playableColors
         .where((color) => color != currentColor)
         .toList();
 
@@ -269,7 +348,11 @@ class ColorMatchSpinRushController {
 
   void _spawnItem(Size size) {
     final colorType = _resolveNextColor();
-    _lastSpawnedColor = colorType;
+
+    if (colorType != DropColorType.purple) {
+      _lastSpawnedColor = colorType;
+    }
+
     _spawnedItemCount++;
 
     _items.add(
@@ -293,6 +376,12 @@ class ColorMatchSpinRushController {
   }
 
   void _catchItem(FallingItem item) {
+    if (item.colorType == DropColorType.purple) {
+      _items.remove(item);
+      _activateReverseSwipe();
+      return;
+    }
+
     _catchEventCount++;
     _items.remove(item);
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum DropColorType { red, blue, green, yellow }
+enum DropColorType { red, blue, green, yellow, purple }
 
 extension DropColorTypeX on DropColorType {
   Color get color {
@@ -13,6 +13,8 @@ extension DropColorTypeX on DropColorType {
         return Colors.greenAccent;
       case DropColorType.yellow:
         return Colors.amberAccent;
+      case DropColorType.purple:
+        return const Color(0xFF9B5CFF);
     }
   }
 
@@ -26,6 +28,8 @@ extension DropColorTypeX on DropColorType {
         return 'Green';
       case DropColorType.yellow:
         return 'Yellow';
+      case DropColorType.purple:
+        return 'Purple';
     }
   }
 }
