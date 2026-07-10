@@ -24,6 +24,10 @@ class GamePainter extends CustomPainter {
     if (controller.isReverseSwipeActive) {
       _drawReverseSwipeWarning(canvas, size);
     }
+
+    if (controller.catchPointEffectActive) {
+      _drawCatchPointEffect(canvas, size);
+    }
   }
 
   void _drawBackground(Canvas canvas, Size size) {
@@ -379,6 +383,76 @@ class GamePainter extends CustomPainter {
       weight: FontWeight.w900,
       color: darkBrown,
     );
+  }
+
+  void _drawCatchPointEffect(Canvas canvas, Size size) {
+    final colorType = controller.catchPointEffectColor;
+    if (colorType == null) return;
+
+    final progress = controller.catchPointEffectProgress.clamp(0.0, 1.0);
+    final effectColor = controller.catchPointEffectSuccess
+        ? colorType.color
+        : const Color(0xFFE53935);
+
+    final wheelCenter = Offset(size.width / 2, size.height - 135);
+
+    final catchPoint = Offset(size.width / 2, wheelCenter.dy - 88);
+
+    final fade = progress;
+    final radius = 18 + ((1 - progress) * 34);
+
+    final ringPaint = Paint()
+      ..color = effectColor.withOpacity(0.58 * fade)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5;
+
+    canvas.drawCircle(catchPoint, radius, ringPaint);
+
+    final innerPaint = Paint()
+      ..color = effectColor.withOpacity(0.24 * fade)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(catchPoint, radius * 0.55, innerPaint);
+
+    if (controller.catchPointEffectSuccess) {
+      final sparkPaint = Paint()
+        ..color = Colors.white.withOpacity(0.82 * fade)
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round;
+
+      for (var i = 0; i < 8; i++) {
+        final angle = (pi * 2 / 8) * i;
+        final start = Offset(
+          catchPoint.dx + cos(angle) * (radius * 0.50),
+          catchPoint.dy + sin(angle) * (radius * 0.50),
+        );
+        final end = Offset(
+          catchPoint.dx + cos(angle) * (radius * 0.86),
+          catchPoint.dy + sin(angle) * (radius * 0.86),
+        );
+
+        canvas.drawLine(start, end, sparkPaint);
+      }
+    } else {
+      final impactPaint = Paint()
+        ..color = const Color(0xFFE53935).withOpacity(0.92 * fade)
+        ..strokeWidth = 6
+        ..strokeCap = StrokeCap.round;
+
+      const xSize = 18.0;
+
+      canvas.drawLine(
+        catchPoint.translate(-xSize, -xSize),
+        catchPoint.translate(xSize, xSize),
+        impactPaint,
+      );
+
+      canvas.drawLine(
+        catchPoint.translate(xSize, -xSize),
+        catchPoint.translate(-xSize, xSize),
+        impactPaint,
+      );
+    }
   }
 
   void _drawReverseSwipeWarning(Canvas canvas, Size size) {

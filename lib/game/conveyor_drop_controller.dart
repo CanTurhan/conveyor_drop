@@ -57,7 +57,11 @@ class ColorMatchSpinRushController {
   int _spawnedItemCount = 0;
   double _reverseSwipeRemainingSeconds = 0;
   double _reverseBallCooldownSeconds = 0;
+  double _catchPointEffectSeconds = 0;
+  DropColorType? _catchPointEffectColor;
+  bool _catchPointEffectSuccess = true;
   DropColorType? _lastSpawnedColor;
+  int _sameColorStreak = 0;
   bool _useTutorialSequence = false;
   int _catchEventCount = 0;
   int _lives = 3;
@@ -85,6 +89,13 @@ class ColorMatchSpinRushController {
   bool get isReverseSwipeActive => _reverseSwipeRemainingSeconds > 0;
   double get reverseSwipeRemainingSeconds =>
       max(0.0, _reverseSwipeRemainingSeconds);
+
+  bool get catchPointEffectActive => _catchPointEffectSeconds > 0;
+  double get catchPointEffectProgress =>
+      _catchPointEffectSeconds <= 0 ? 0 : _catchPointEffectSeconds / 0.34;
+  DropColorType? get catchPointEffectColor => _catchPointEffectColor;
+  bool get catchPointEffectSuccess => _catchPointEffectSuccess;
+
   int get catchEventCount => _catchEventCount;
   int get lives => _lives;
   int get level => (_score ~/ pointsPerLevel) + 1;
@@ -186,6 +197,10 @@ class ColorMatchSpinRushController {
       );
     }
 
+    if (_catchPointEffectSeconds > 0) {
+      _catchPointEffectSeconds = max(0.0, _catchPointEffectSeconds - safeDt);
+    }
+
     final tutorialActive = _spawnedItemCount < _tutorialSequence.length;
     final secondsAfterGrace = max(0.0, _elapsedGameSeconds - noSpeedUpSeconds);
 
@@ -197,6 +212,9 @@ class ColorMatchSpinRushController {
 
     if (_spawnTimer >= spawnInterval) {
       _spawnTimer = 0;
+      _catchPointEffectSeconds = 0;
+      _catchPointEffectColor = null;
+      _catchPointEffectSuccess = true;
       _spawnItem(size);
     }
 
@@ -248,6 +266,7 @@ class ColorMatchSpinRushController {
     _reverseSwipeRemainingSeconds = 0;
     _reverseBallCooldownSeconds = 0;
     _lastSpawnedColor = null;
+    _sameColorStreak = 0;
     _spawnTimer = 0;
     _elapsedGameSeconds = 0;
     _isStarted = started;
@@ -308,6 +327,12 @@ class ColorMatchSpinRushController {
 
     final lastColor = _lastSpawnedColor;
 
+    if (_elapsedGameSeconds >= 10 &&
+        lastColor != null &&
+        _sameColorStreak >= 2) {
+      return _randomDifferentColor(lastColor);
+    }
+
     if (lastColor != null && _random.nextDouble() < _sameColorChance) {
       return lastColor;
     }
@@ -350,6 +375,12 @@ class ColorMatchSpinRushController {
     final colorType = _resolveNextColor();
 
     if (colorType != DropColorType.purple) {
+      if (_lastSpawnedColor == colorType) {
+        _sameColorStreak++;
+      } else {
+        _sameColorStreak = 1;
+      }
+
       _lastSpawnedColor = colorType;
     }
 
@@ -375,7 +406,17 @@ class ColorMatchSpinRushController {
     }
   }
 
+  void _triggerCatchPointEffect(
+    DropColorType colorType, {
+    required bool success,
+  }) {
+    _catchPointEffectColor = colorType;
+    _catchPointEffectSuccess = success;
+    _catchPointEffectSeconds = 0.34;
+  }
+
   void _catchItem(FallingItem item) {
+    _triggerCatchPointEffect(item.colorType, success: true);
     if (item.colorType == DropColorType.purple) {
       _items.remove(item);
       _activateReverseSwipe();
