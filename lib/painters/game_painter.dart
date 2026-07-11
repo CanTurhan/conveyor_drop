@@ -28,6 +28,10 @@ class GamePainter extends CustomPainter {
     if (controller.catchPointEffectActive) {
       _drawCatchPointEffect(canvas, size);
     }
+
+    if (controller.isReverseSwipeActive) {
+      _drawReverseWheelGlow(canvas, size);
+    }
   }
 
   void _drawBackground(Canvas canvas, Size size) {
@@ -452,6 +456,39 @@ class GamePainter extends CustomPainter {
         catchPoint.translate(-xSize, xSize),
         impactPaint,
       );
+    }
+  }
+
+  void _drawReverseWheelGlow(Canvas canvas, Size size) {
+    final wheelCenter = Offset(size.width / 2, size.height - 135);
+
+    final pulse =
+        0.5 + (sin(controller.reverseSwipeRemainingSeconds * pi * 3) * 0.5);
+
+    final glowPaint = Paint()
+      ..color = const Color(0xFF9B5CFF).withOpacity(0.24 + pulse * 0.22)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 9 + pulse * 4;
+
+    canvas.drawCircle(wheelCenter, 112 + pulse * 4, glowPaint);
+
+    final linePaint = Paint()
+      ..color = const Color(0xFF9B5CFF).withOpacity(0.75)
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+
+    for (var i = 0; i < 4; i++) {
+      final angle = (pi / 2 * i) + (pi / 4);
+      final start = Offset(
+        wheelCenter.dx + cos(angle) * 34,
+        wheelCenter.dy + sin(angle) * 34,
+      );
+      final end = Offset(
+        wheelCenter.dx + cos(angle) * 106,
+        wheelCenter.dy + sin(angle) * 106,
+      );
+
+      canvas.drawLine(start, end, linePaint);
     }
   }
 

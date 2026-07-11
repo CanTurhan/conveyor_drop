@@ -46,9 +46,16 @@ class _GameScreenState extends State<GameScreen>
   Duration _nextLifeRemaining = Duration.zero;
   bool _gameOverLifeHandled = false;
   bool _tutorialCompleted = true;
+  bool _purpleTutorialSeen = true;
+  bool _purpleTutorialDialogVisible = false;
+  int _lastPurpleSpawnEventCount = 0;
+  bool _wasReverseSwipeActive = false;
+  bool _wasGameOver = false;
 
   double _hintVisibleSeconds = 0;
   int _lastCatchEventCount = 0;
+      _wasReverseSwipeActive = false;
+      _wasGameOver = false;
 
   @override
   void initState() {
@@ -59,6 +66,7 @@ class _GameScreenState extends State<GameScreen>
 
     _loadLives();
     _loadTutorialState();
+    _loadPurpleTutorialState();
     unawaited(_audioService.setSoundEnabled(_soundEnabled));
     _rewardedLifeAdService.load();
 
@@ -88,6 +96,23 @@ class _GameScreenState extends State<GameScreen>
     if (_lastSize != Size.zero) {
       _controller.update(dt, _lastSize);
     }
+
+    if (_controller.purpleSpawnEventCount > _lastPurpleSpawnEventCount) {
+      _lastPurpleSpawnEventCount = _controller.purpleSpawnEventCount;
+      unawaited(_showPurpleBallTutorialDialog());
+    }
+
+    final isReverseSwipeActive = _controller.isReverseSwipeActive;
+    if (isReverseSwipeActive && !_wasReverseSwipeActive) {
+      _vibrate('medium');
+    }
+    _wasReverseSwipeActive = isReverseSwipeActive;
+
+    final isGameOver = _controller.isGameOver;
+    if (isGameOver && !_wasGameOver) {
+      _vibrate('heavy');
+    }
+    _wasGameOver = isGameOver;
 
     if (_controller.catchEventCount > _lastCatchEventCount) {
       _lastCatchEventCount = _controller.catchEventCount;
@@ -131,6 +156,95 @@ class _GameScreenState extends State<GameScreen>
     setState(() {
       _tutorialCompleted = true;
     });
+  }
+
+  Future<void> _loadPurpleTutorialState() async {
+    final seen = await _tutorialService.isPurpleTutorialSeen();
+
+    if (!mounted) return;
+
+    setState(() {
+      _purpleTutorialSeen = seen;
+    });
+  }
+
+  Future<void> _showPurpleBallTutorialDialog() async {
+    if (_purpleTutorialSeen || _purpleTutorialDialogVisible || !mounted) {
+      return;
+    }
+
+    _purpleTutorialDialogVisible = true;
+    _controller.pause();
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFFFFF4DF),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(26),
+            side: const BorderSide(color: Color(0xFF3A2A1C), width: 3),
+          ),
+          title: const Text(
+            'Purple Ball Incoming!',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF3A2A1C),
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          content: const Text(
+            'Catch it to reverse the wheel controls for 10 seconds.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF3A2A1C),
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              height: 1.35,
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: const Color(0xFF9B5CFF),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 13,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text(
+                'GOT IT',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    await _tutorialService.setPurpleTutorialSeen();
+
+    if (!mounted) return;
+
+    setState(() {
+      _purpleTutorialSeen = true;
+    });
+
+    _controller.resume();
+    _purpleTutorialDialogVisible = false;
   }
 
   Future<void> _loadLives() async {
@@ -215,9 +329,24 @@ class _GameScreenState extends State<GameScreen>
     _vibrate();
   }
 
-  void _vibrate() {
+  void _vibrate([String type = 'selection']) {
     if (!_vibrationEnabled) return;
-    HapticFeedback.selectionClick();
+
+    switch (type) {
+      case 'light':
+        HapticFeedback.lightImpact();
+        break;
+      case 'medium':
+        HapticFeedback.mediumImpact();
+        break;
+      case 'heavy':
+        HapticFeedback.heavyImpact();
+        break;
+      case 'selection':
+      default:
+        HapticFeedback.selectionClick();
+        break;
+    }
   }
 
   Future<void> _startGame() async {

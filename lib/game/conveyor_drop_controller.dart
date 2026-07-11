@@ -18,7 +18,7 @@ class ColorMatchSpinRushController {
   static const double noSpeedUpSeconds = 30;
   static const double reverseBallStartSeconds = 60;
   static const double reverseBallBaseCooldownSeconds = 12;
-  static const double reverseSwipeBaseDurationSeconds = 5;
+  static const double reverseSwipeBaseDurationSeconds = 10;
 
   static const double wheelCenterBottomOffset = 135;
   static const double wheelRadius = 76;
@@ -64,6 +64,7 @@ class ColorMatchSpinRushController {
   int _sameColorStreak = 0;
   bool _useTutorialSequence = false;
   int _catchEventCount = 0;
+  int _purpleSpawnEventCount = 0;
   int _lives = 3;
 
   double _visualRotation = 0;
@@ -97,6 +98,7 @@ class ColorMatchSpinRushController {
   bool get catchPointEffectSuccess => _catchPointEffectSuccess;
 
   int get catchEventCount => _catchEventCount;
+  int get purpleSpawnEventCount => _purpleSpawnEventCount;
   int get lives => _lives;
   int get level => (_score ~/ pointsPerLevel) + 1;
 
@@ -306,10 +308,7 @@ class ColorMatchSpinRushController {
     return max(8.0, reverseBallBaseCooldownSeconds - levelReduction);
   }
 
-  double get _reverseSwipeDuration {
-    final levelBonus = max(0, level - 3) * 0.25;
-    return min(7.0, reverseSwipeBaseDurationSeconds + levelBonus);
-  }
+  double get _reverseSwipeDuration => reverseSwipeBaseDurationSeconds;
 
   void _activateReverseSwipe() {
     _reverseSwipeRemainingSeconds = _reverseSwipeDuration;
@@ -374,6 +373,10 @@ class ColorMatchSpinRushController {
   void _spawnItem(Size size) {
     final colorType = _resolveNextColor();
 
+    if (colorType == DropColorType.purple) {
+      _purpleSpawnEventCount++;
+    }
+
     if (colorType != DropColorType.purple) {
       if (_lastSpawnedColor == colorType) {
         _sameColorStreak++;
@@ -417,6 +420,7 @@ class ColorMatchSpinRushController {
 
   void _catchItem(FallingItem item) {
     _triggerCatchPointEffect(item.colorType, success: true);
+
     if (item.colorType == DropColorType.purple) {
       _items.remove(item);
       _activateReverseSwipe();

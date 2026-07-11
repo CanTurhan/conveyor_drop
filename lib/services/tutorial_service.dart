@@ -17,4 +17,21 @@ class TutorialService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tutorialCompletedKey);
   }
+
+  static const String _purpleTutorialSeenKey = 'purple_tutorial_seen';
+
+  Future<bool> isPurpleTutorialSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_purpleTutorialSeenKey) ?? false;
+  }
+
+  Future<void> setPurpleTutorialSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_purpleTutorialSeenKey, true);
+  }
+
+  Future<void> resetPurpleTutorialForTesting() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_purpleTutorialSeenKey);
+  }
 }
