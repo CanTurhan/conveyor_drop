@@ -314,9 +314,6 @@ class GamePainter extends CustomPainter {
         ..strokeWidth = 3;
 
       canvas.drawCircle(position, pieceRadius, borderPaint);
-
-      final count = controller.bins[colorType] ?? 0;
-      _drawCountBubble(canvas, position, '$count/3');
     }
 
     canvas.restore();

@@ -240,14 +240,15 @@ class ColorMatchSpinRushController {
   }
 
   void _updateWheelAnimation(double dt) {
+    final safeDt = dt.clamp(0.0, 1 / 30);
     final diff = _targetRotation - _visualRotation;
 
-    if (diff.abs() < 0.001) {
+    if (diff.abs() < 0.0008) {
       _visualRotation = _targetRotation;
       return;
     }
 
-    final smoothing = min(1.0, dt * 14);
+    final smoothing = 1 - pow(0.00008, safeDt).toDouble();
     _visualRotation += diff * smoothing;
   }
 

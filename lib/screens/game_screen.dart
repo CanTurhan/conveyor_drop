@@ -54,8 +54,6 @@ class _GameScreenState extends State<GameScreen>
 
   double _hintVisibleSeconds = 0;
   int _lastCatchEventCount = 0;
-      _wasReverseSwipeActive = false;
-      _wasGameOver = false;
 
   @override
   void initState() {
