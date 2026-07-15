@@ -17,7 +17,7 @@ class ColorMatchSpinRushController {
   static const int pointsPerLevel = 12;
   static const double earlySlowSeconds = 20;
   static const double noSpeedUpSeconds = 30;
-  static const double reverseBallStartSeconds = 60;
+  static const double reverseBallStartSeconds = 50;
   static const double reverseBallBaseCooldownSeconds = 12;
   static const double reverseSwipeBaseDurationSeconds = 10;
 
@@ -66,7 +66,7 @@ class ColorMatchSpinRushController {
   bool _useTutorialSequence = false;
   int _catchEventCount = 0;
   int _purpleSpawnEventCount = 0;
-  int _lives = 3;
+  int _lives = 5;
 
   double _visualRotation = 0;
   double _targetRotation = 0;
@@ -119,7 +119,7 @@ class ColorMatchSpinRushController {
   }
 
   void setLives(int lives) {
-    _lives = lives.clamp(0, 3);
+    _lives = lives.clamp(0, 5);
   }
 
   void start() {
@@ -426,7 +426,8 @@ class ColorMatchSpinRushController {
 
     for (final item in List<FallingItem>.from(_items)) {
       if (item.y >= catchY) {
-        if (item.colorType == topWheelColor) {
+        if (item.colorType == DropColorType.purple ||
+            item.colorType == topWheelColor) {
           _catchItem(item);
         } else {
           _finishGame();
