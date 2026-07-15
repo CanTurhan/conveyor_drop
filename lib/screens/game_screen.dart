@@ -120,11 +120,6 @@ class _GameScreenState extends State<GameScreen>
     }
     _wasGameOver = isGameOver;
 
-    if (_controller.catchEventCount > _lastCatchEventCount) {
-      _lastCatchEventCount = _controller.catchEventCount;
-      unawaited(_audioService.playCorrectCatchEffect());
-    }
-
     if (_controller.isGameOver && !_gameOverLifeHandled) {
       _gameOverLifeHandled = true;
       _consumeLifeAfterGameOver();

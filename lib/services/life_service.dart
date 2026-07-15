@@ -14,10 +14,22 @@ class LifeService {
   static const Duration refillDuration = Duration(minutes: 5);
 
   static const String _livesKey = 'current_lives';
+  static const String _maxLivesMigrationKey = 'max_lives_migration_value';
   static const String _lastLifeUpdateKey = 'last_life_update_millis';
 
   Future<LivesState> loadState() async {
     final prefs = await SharedPreferences.getInstance();
+
+    final storedMaxLives = prefs.getInt(_maxLivesMigrationKey);
+    if (storedMaxLives != maxLives) {
+      await prefs.setInt(_livesKey, maxLives);
+      await prefs.setInt(_maxLivesMigrationKey, maxLives);
+      await prefs.setInt(
+        _lastLifeUpdateKey,
+        DateTime.now().millisecondsSinceEpoch,
+      );
+    }
+
     final now = DateTime.now().millisecondsSinceEpoch;
 
     if (!prefs.containsKey(_livesKey)) {
