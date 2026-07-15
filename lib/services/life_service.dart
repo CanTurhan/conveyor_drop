@@ -10,7 +10,7 @@ class LivesState {
 }
 
 class LifeService {
-  static const int maxLives = 3;
+  static const int maxLives = 5;
   static const Duration refillDuration = Duration(minutes: 5);
 
   static const String _livesKey = 'current_lives';

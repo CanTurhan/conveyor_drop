@@ -363,29 +363,6 @@ class GamePainter extends CustomPainter {
     canvas.drawPath(path, arrowPaint);
   }
 
-  void _drawCountBubble(Canvas canvas, Offset position, String text) {
-    final bubblePaint = Paint()
-      ..color = const Color.fromRGBO(255, 246, 232, 0.90)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: position, width: 38, height: 22),
-        const Radius.circular(11),
-      ),
-      bubblePaint,
-    );
-
-    _drawText(
-      canvas: canvas,
-      text: text,
-      position: position,
-      fontSize: 11,
-      weight: FontWeight.w900,
-      color: darkBrown,
-    );
-  }
-
   void _drawCatchPointEffect(Canvas canvas, Size size) {
     final colorType = controller.catchPointEffectColor;
     if (colorType == null) return;

@@ -38,6 +38,8 @@ class _GameScreenState extends State<GameScreen>
 
   Duration _lastElapsed = Duration.zero;
   Size _lastSize = Size.zero;
+  bool _isWheelDragActive = false;
+  double _wheelDragAccumulator = 0;
 
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
@@ -93,6 +95,12 @@ class _GameScreenState extends State<GameScreen>
 
     if (_lastSize != Size.zero) {
       _controller.update(dt, _lastSize);
+    }
+
+    if (_controller.catchEventCount > _lastCatchEventCount) {
+      _audioService.playCorrectCatchEffect();
+      _vibrate('medium');
+      _lastCatchEventCount = _controller.catchEventCount;
     }
 
     if (_controller.purpleSpawnEventCount > _lastPurpleSpawnEventCount) {
@@ -172,6 +180,7 @@ class _GameScreenState extends State<GameScreen>
     }
 
     _purpleTutorialDialogVisible = true;
+    _controller.preparePurpleTutorialSpawn();
     _controller.pause();
 
     await showDialog<void>(
@@ -241,6 +250,7 @@ class _GameScreenState extends State<GameScreen>
       _purpleTutorialSeen = true;
     });
 
+    _controller.spawnPurpleTutorialBallFromTop();
     _controller.resume();
     _purpleTutorialDialogVisible = false;
   }
@@ -318,13 +328,49 @@ class _GameScreenState extends State<GameScreen>
     return '$minutes:$seconds';
   }
 
-  void _handleSwipe(DragEndDetails details) {
-    final velocity = details.primaryVelocity ?? 0;
+  void _handleWheelDragStart(DragStartDetails details) {
+    if (_lastSize == Size.zero) return;
 
-    if (velocity == 0) return;
+    final touchPosition = details.localPosition;
 
-    _controller.rotateWithVelocity(velocity);
+    // The wheel is at the bottom of the screen. Let the whole lower wheel
+    // control area respond, not only the exact circular center.
+    final wheelControlTop = _lastSize.height - 330;
+
+    _isWheelDragActive = touchPosition.dy >= wheelControlTop;
+    _wheelDragAccumulator = 0;
+  }
+
+  void _handleWheelDragUpdate(DragUpdateDetails details) {
+    if (!_isWheelDragActive) return;
+
+    _wheelDragAccumulator += details.delta.dx;
+
+    // Higher value = calmer wheel. Lower value = faster wheel.
+    const dragStepThreshold = 34.0;
+
+    if (_wheelDragAccumulator.abs() < dragStepThreshold) {
+      return;
+    }
+
+    if (_wheelDragAccumulator > 0) {
+      _controller.rotateRight();
+    } else {
+      _controller.rotateLeft();
+    }
+
+    _wheelDragAccumulator = 0;
     _vibrate();
+  }
+
+  void _handleWheelDragEnd(DragEndDetails details) {
+    _isWheelDragActive = false;
+    _wheelDragAccumulator = 0;
+  }
+
+  void _handleWheelDragCancel() {
+    _isWheelDragActive = false;
+    _wheelDragAccumulator = 0;
   }
 
   void _vibrate([String type = 'selection']) {
@@ -339,6 +385,9 @@ class _GameScreenState extends State<GameScreen>
         break;
       case 'heavy':
         HapticFeedback.heavyImpact();
+        break;
+      case 'vibrate':
+        HapticFeedback.vibrate();
         break;
       case 'selection':
       default:
@@ -505,8 +554,11 @@ class _GameScreenState extends State<GameScreen>
     return Scaffold(
       body: SizedBox.expand(
         child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onHorizontalDragEnd: _handleSwipe,
+          behavior: HitTestBehavior.translucent,
+          onPanStart: _handleWheelDragStart,
+          onPanUpdate: _handleWheelDragUpdate,
+          onPanEnd: _handleWheelDragEnd,
+          onPanCancel: _handleWheelDragCancel,
           child: Stack(
             fit: StackFit.expand,
             children: [

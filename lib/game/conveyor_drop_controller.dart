@@ -15,6 +15,7 @@ class ColorMatchSpinRushController {
   final Random _random = Random();
 
   static const int pointsPerLevel = 12;
+  static const double earlySlowSeconds = 20;
   static const double noSpeedUpSeconds = 30;
   static const double reverseBallStartSeconds = 60;
   static const double reverseBallBaseCooldownSeconds = 12;
@@ -69,6 +70,7 @@ class ColorMatchSpinRushController {
 
   double _visualRotation = 0;
   double _targetRotation = 0;
+  Size? _lastUpdateSize;
 
   double _spawnTimer = 0;
   double _elapsedGameSeconds = 0;
@@ -111,7 +113,8 @@ class ColorMatchSpinRushController {
   bool get isPaused => _isPaused;
 
   DropColorType get topWheelColor {
-    final index = ((-_rotationSteps) % 4 + 4) % 4;
+    final visualStep = (_visualRotation / (pi / 2)).round();
+    final index = ((-visualStep) % 4 + 4) % 4;
     return wheelColors[index];
   }
 
@@ -125,6 +128,23 @@ class ColorMatchSpinRushController {
 
   void restart() {
     _reset(started: true);
+  }
+
+  void preparePurpleTutorialSpawn() {
+    _items.clear();
+    _spawnTimer = 0;
+  }
+
+  void spawnPurpleTutorialBallFromTop() {
+    _items.clear();
+    _spawnTimer = 0;
+
+    final size = _lastUpdateSize;
+    if (size == null) {
+      return;
+    }
+
+    _spawnItem(size, forcedColorType: DropColorType.purple);
   }
 
   void pause() {
@@ -170,6 +190,7 @@ class ColorMatchSpinRushController {
   }
 
   void update(double dt, Size size) {
+    _lastUpdateSize = size;
     if (size.width <= 0 || size.height <= 0) return;
 
     final safeDt = min(dt, 0.033);
@@ -240,15 +261,19 @@ class ColorMatchSpinRushController {
   }
 
   void _updateWheelAnimation(double dt) {
-    final safeDt = dt.clamp(0.0, 1 / 30);
+    final safeDt = dt.clamp(0.0, 1 / 60);
     final diff = _targetRotation - _visualRotation;
 
-    if (diff.abs() < 0.0008) {
+    if (diff.abs() < 0.0005) {
       _visualRotation = _targetRotation;
       return;
     }
 
-    final smoothing = 1 - pow(0.00008, safeDt).toDouble();
+    // Professional-feeling smooth response:
+    // fast enough for gameplay, stable enough to avoid jitter.
+    const responseSpeed = 22.0;
+    final smoothing = 1 - exp(-responseSpeed * safeDt);
+
     _visualRotation += diff * smoothing;
   }
 
@@ -371,8 +396,8 @@ class ColorMatchSpinRushController {
     return availableColors[_random.nextInt(availableColors.length)];
   }
 
-  void _spawnItem(Size size) {
-    final colorType = _resolveNextColor();
+  void _spawnItem(Size size, {DropColorType? forcedColorType}) {
+    final colorType = forcedColorType ?? _resolveNextColor();
 
     if (colorType == DropColorType.purple) {
       _purpleSpawnEventCount++;
